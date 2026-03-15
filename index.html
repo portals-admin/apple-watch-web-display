@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Apple Watch – Current Time</title>
+  <style>
+    /* ── Reset & Base ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(ellipse at 50% 30%, #1a1a2e 0%, #0d0d0d 70%);
+      font-family: -apple-system, "SF Pro Display", "Helvetica Neue", sans-serif;
+      overflow: hidden;
+    }
+
+    /* ── Ambient glow behind the watch ───────────────────────── */
+    .ambient {
+      position: fixed;
+      width: 420px; height: 420px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,.06) 0%, transparent 70%);
+      pointer-events: none;
+      animation: ambientPulse 4s ease-in-out infinite alternate;
+    }
+    @keyframes ambientPulse {
+      from { opacity: .6; transform: scale(1); }
+      to   { opacity: 1;  transform: scale(1.08); }
+    }
+
+    /* ── Watch chassis ────────────────────────────────────────── */
+    .watch-wrapper {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+    }
+
+    /* Top strap */
+    .strap-top, .strap-bottom {
+      width: 138px;
+      background: linear-gradient(160deg, #2a2a2a 0%, #1a1a1a 40%, #252525 100%);
+      border-radius: 12px 12px 0 0;
+      position: relative;
+    }
+    .strap-top  { height: 110px; border-radius: 14px 14px 0 0; }
+    .strap-bottom { height: 110px; border-radius: 0 0 14px 14px; }
+
+    /* Strap texture */
+    .strap-top::after, .strap-bottom::after {
+      content: "";
+      position: absolute; inset: 0;
+      background: repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 10px,
+        rgba(255,255,255,.03) 10px,
+        rgba(255,255,255,.03) 11px
+      );
+      border-radius: inherit;
+    }
+
+    /* Watch case */
+    .watch-case {
+      position: relative;
+      width: 176px;
+      height: 210px;
+      background: linear-gradient(145deg, #4a4a4a 0%, #2c2c2c 35%, #1c1c1c 65%, #3a3a3a 100%);
+      border-radius: 52px;
+      box-shadow:
+        0 0 0 1.5px #555,
+        0 0 0 3px #222,
+        inset 0 1px 2px rgba(255,255,255,.15),
+        0 20px 60px rgba(0,0,0,.8),
+        0 4px 20px rgba(0,0,0,.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+
+    /* Digital crown */
+    .crown {
+      position: absolute;
+      right: -10px;
+      top: 50%;
+      transform: translateY(-60%);
+      width: 12px;
+      height: 38px;
+      background: linear-gradient(180deg, #555 0%, #333 40%, #444 100%);
+      border-radius: 6px;
+      box-shadow:
+        1px 0 3px rgba(0,0,0,.5),
+        inset -1px 0 2px rgba(255,255,255,.1);
+    }
+    .crown::before {
+      content: "";
+      position: absolute;
+      inset: 4px 2px;
+      border-radius: 4px;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(255,255,255,.08) 0px,
+        rgba(255,255,255,.08) 2px,
+        transparent 2px,
+        transparent 4px
+      );
+    }
+
+    /* Side button */
+    .side-btn {
+      position: absolute;
+      right: -9px;
+      top: 50%;
+      transform: translateY(140%);
+      width: 10px;
+      height: 22px;
+      background: linear-gradient(180deg, #444 0%, #2a2a2a 100%);
+      border-radius: 4px;
+      box-shadow: 1px 0 3px rgba(0,0,0,.5);
+    }
+
+    /* Watch screen bezel */
+    .watch-screen-bezel {
+      width: 152px;
+      height: 186px;
+      background: #000;
+      border-radius: 42px;
+      overflow: hidden;
+      position: relative;
+      box-shadow:
+        inset 0 2px 8px rgba(0,0,0,.9),
+        inset 0 0 0 1px rgba(255,255,255,.05);
+    }
+
+    /* Watch screen */
+    .watch-screen {
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(ellipse at 50% 20%, #1a1a2a 0%, #050508 100%);
+      border-radius: 42px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      position: relative;
+    }
+
+    /* Screen glare */
+    .watch-screen::before {
+      content: "";
+      position: absolute;
+      top: -20px; left: -30px;
+      width: 140px; height: 100px;
+      background: radial-gradient(ellipse, rgba(255,255,255,.07) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    /* ── Watch face complications ─────────────────────────────── */
+    .complication-top {
+      font-size: 11px;
+      font-weight: 500;
+      color: rgba(255,255,255,.45);
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+
+    /* ── Analog clock face ────────────────────────────────────── */
+    .clock-face {
+      position: relative;
+      width: 110px;
+      height: 110px;
+    }
+
+    .clock-face svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    /* Hour markers */
+    .hour-marker {
+      stroke: rgba(255,255,255,.5);
+      stroke-linecap: round;
+    }
+    .hour-marker-major {
+      stroke: rgba(255,255,255,.75);
+    }
+
+    /* Hands */
+    .hand-hour {
+      stroke: #fff;
+      stroke-width: 5.5;
+      stroke-linecap: round;
+      transform-origin: 55px 55px;
+      filter: drop-shadow(0 0 4px rgba(255,255,255,.4));
+      transition: transform 0.5s cubic-bezier(0.4, 2.08, 0.55, 0.44);
+    }
+    .hand-minute {
+      stroke: #fff;
+      stroke-width: 3.5;
+      stroke-linecap: round;
+      transform-origin: 55px 55px;
+      filter: drop-shadow(0 0 4px rgba(255,255,255,.4));
+      transition: transform 0.5s cubic-bezier(0.4, 2.08, 0.55, 0.44);
+    }
+    .hand-second {
+      stroke: #ff3b30;
+      stroke-width: 2;
+      stroke-linecap: round;
+      transform-origin: 55px 55px;
+      transition: transform 0.25s cubic-bezier(0.4, 2.08, 0.55, 0.44);
+    }
+    .hand-second-tail {
+      stroke: #ff3b30;
+      stroke-width: 2;
+      stroke-linecap: round;
+      transform-origin: 55px 55px;
+      transition: transform 0.25s cubic-bezier(0.4, 2.08, 0.55, 0.44);
+    }
+
+    /* Center dot */
+    .center-dot {
+      fill: #ff3b30;
+      filter: drop-shadow(0 0 3px rgba(255,59,48,.8));
+    }
+    .center-dot-inner { fill: #fff; }
+
+    /* ── Digital time below analog ───────────────────────────── */
+    .digital-time {
+      font-size: 13px;
+      font-weight: 300;
+      color: rgba(255,255,255,.6);
+      letter-spacing: .08em;
+      margin-top: 4px;
+      font-variant-numeric: tabular-nums;
+      transition: opacity .3s ease;
+    }
+
+    /* Date complication */
+    .complication-date {
+      font-size: 10px;
+      font-weight: 400;
+      color: rgba(255,255,255,.35);
+      letter-spacing: .05em;
+    }
+
+    /* Activity rings (decorative) */
+    .activity-rings {
+      position: absolute;
+      bottom: 18px;
+      right: 16px;
+      width: 28px;
+      height: 28px;
+      opacity: .85;
+    }
+
+    /* Battery / status area */
+    .status-bar {
+      position: absolute;
+      top: 14px;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 18px;
+    }
+    .status-icon {
+      font-size: 9px;
+      color: rgba(255,255,255,.35);
+      letter-spacing: .03em;
+    }
+
+    /* ── Reflection overlay ───────────────────────────────────── */
+    .screen-reflection {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        135deg,
+        rgba(255,255,255,.06) 0%,
+        transparent 50%
+      );
+      border-radius: 42px;
+      pointer-events: none;
+    }
+
+    /* ── Info text below watch ────────────────────────────────── */
+    .watch-label {
+      margin-top: 28px;
+      text-align: center;
+      color: rgba(255,255,255,.25);
+      font-size: 11px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+
+<div class="ambient"></div>
+
+<div class="watch-wrapper">
+  <!-- Top strap -->
+  <div class="strap-top"></div>
+
+  <!-- Watch case -->
+  <div class="watch-case">
+    <div class="crown"></div>
+    <div class="side-btn"></div>
+
+    <div class="watch-screen-bezel">
+      <div class="watch-screen">
+
+        <!-- Status bar -->
+        <div class="status-bar">
+          <span class="status-icon" id="status-time"></span>
+          <span class="status-icon">⚡ 87%</span>
+        </div>
+
+        <!-- Day/date complication -->
+        <div class="complication-top" id="day-date"></div>
+
+        <!-- Analog clock face -->
+        <div class="clock-face">
+          <svg viewBox="0 0 110 110">
+            <!-- Outer ring -->
+            <circle cx="55" cy="55" r="53" fill="none"
+              stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+
+            <!-- Hour tick marks -->
+            <g id="ticks"></g>
+
+            <!-- Minute hand -->
+            <line id="hand-minute" class="hand-minute"
+              x1="55" y1="55" x2="55" y2="14"/>
+
+            <!-- Hour hand -->
+            <line id="hand-hour" class="hand-hour"
+              x1="55" y1="55" x2="55" y2="22"/>
+
+            <!-- Second hand (tail then tip) -->
+            <line id="hand-second-tail" class="hand-second-tail"
+              x1="55" y1="55" x2="55" y2="68"/>
+            <line id="hand-second" class="hand-second"
+              x1="55" y1="55" x2="55" y2="10"/>
+
+            <!-- Center hub -->
+            <circle cx="55" cy="55" r="5" class="center-dot"/>
+            <circle cx="55" cy="55" r="2.5" class="center-dot-inner"/>
+          </svg>
+        </div>
+
+        <!-- Digital time -->
+        <div class="digital-time" id="digital-time"></div>
+
+        <!-- Activity rings (SVG) -->
+        <svg class="activity-rings" viewBox="0 0 28 28">
+          <circle cx="14" cy="14" r="12" fill="none"
+            stroke="rgba(255,45,85,.25)" stroke-width="2.5"/>
+          <circle cx="14" cy="14" r="12" fill="none"
+            stroke="#ff2d55" stroke-width="2.5"
+            stroke-dasharray="75.4" stroke-dashoffset="18"
+            stroke-linecap="round" transform="rotate(-90 14 14)"/>
+
+          <circle cx="14" cy="14" r="8.5" fill="none"
+            stroke="rgba(52,199,89,.25)" stroke-width="2.5"/>
+          <circle cx="14" cy="14" r="8.5" fill="none"
+            stroke="#34c759" stroke-width="2.5"
+            stroke-dasharray="53.4" stroke-dashoffset="14"
+            stroke-linecap="round" transform="rotate(-90 14 14)"/>
+
+          <circle cx="14" cy="14" r="5" fill="none"
+            stroke="rgba(0,199,190,.25)" stroke-width="2.5"/>
+          <circle cx="14" cy="14" r="5" fill="none"
+            stroke="#00c7be" stroke-width="2.5"
+            stroke-dasharray="31.4" stroke-dashoffset="10"
+            stroke-linecap="round" transform="rotate(-90 14 14)"/>
+        </svg>
+
+        <div class="screen-reflection"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom strap -->
+  <div class="strap-bottom"></div>
+
+  <div class="watch-label">Apple Watch Series 9</div>
+</div>
+
+<script>
+  /* ── Generate tick marks ──────────────────────────────────── */
+  (function buildTicks() {
+    const g = document.getElementById('ticks');
+    const cx = 55, cy = 55, r = 49;
+    for (let i = 0; i < 60; i++) {
+      const angle = (i * 6 - 90) * Math.PI / 180;
+      const isMajor = i % 5 === 0;
+      const len = isMajor ? 7 : 3.5;
+      const x1 = cx + r * Math.cos(angle);
+      const y1 = cy + r * Math.sin(angle);
+      const x2 = cx + (r - len) * Math.cos(angle);
+      const y2 = cy + (r - len) * Math.sin(angle);
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+      line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+      line.setAttribute('stroke-width', isMajor ? '2' : '1');
+      line.setAttribute('stroke-linecap', 'round');
+      line.setAttribute('class', isMajor ? 'hour-marker hour-marker-major' : 'hour-marker');
+      g.appendChild(line);
+    }
+  })();
+
+  /* ── Clock update ─────────────────────────────────────────── */
+  const cx = 55, cy = 55;
+
+  function setHandAngle(el, deg) {
+    el.style.transform = `rotate(${deg}deg)`;
+  }
+
+  const DAYS   = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN',
+                  'JUL','AUG','SEP','OCT','NOV','DEC'];
+
+  let prevSecond = -1;
+
+  function updateClock() {
+    const now    = new Date();
+    const h      = now.getHours();
+    const m      = now.getMinutes();
+    const s      = now.getSeconds();
+    const ms     = now.getMilliseconds();
+
+    /* ── Smooth continuous angles ─────────────────────────── */
+    const secAngle = (s + ms / 1000) * 6;          // 6° per second
+    const minAngle = (m + (s + ms / 1000) / 60) * 6;  // 6° per minute
+    const hrAngle  = ((h % 12) + m / 60 + s / 3600) * 30; // 30° per hour
+
+    setHandAngle(document.getElementById('hand-hour'),        hrAngle);
+    setHandAngle(document.getElementById('hand-minute'),      minAngle);
+    setHandAngle(document.getElementById('hand-second'),      secAngle);
+    setHandAngle(document.getElementById('hand-second-tail'), secAngle);
+
+    /* ── Digital time ─────────────────────────────────────── */
+    if (s !== prevSecond) {
+      prevSecond = s;
+      const hh   = String(h).padStart(2, '0');
+      const mm   = String(m).padStart(2, '0');
+      const ss   = String(s).padStart(2, '0');
+      document.getElementById('digital-time').textContent = `${hh}:${mm}:${ss}`;
+      document.getElementById('status-time').textContent  = `${hh}:${mm}`;
+
+      /* ── Day / date complication ──────────────────────── */
+      const day   = DAYS[now.getDay()];
+      const date  = now.getDate();
+      const month = MONTHS[now.getMonth()];
+      document.getElementById('day-date').textContent = `${day} ${month} ${date}`;
+    }
+  }
+
+  /* ── High-precision RAF loop ──────────────────────────────── */
+  function tick() {
+    updateClock();
+    requestAnimationFrame(tick);
+  }
+  tick();
+</script>
+</body>
+</html>
